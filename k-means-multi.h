@@ -1,23 +1,23 @@
 //***********************************************************************
 // k-means-multi.h
 //
-//   this is an implementation of the K-means classification algorithm. 
-//   it accepts vectors of multiple attributes (with classifications) and clusters them 
+//   this is an implementation of the K-means classification algorithm.
+//   it accepts vectors of multiple attributes (with classifications) and clusters them
 //	 into K clusters
 //
 // INVOKE APPLICATION USING: k-means-multi <control file name>
 //
 // INPUTS: (from disk file)
-//        <control.txt> - control file 
+//        <control.txt> - control file
 //			   the control file can have any name - specified at application command
 //
 //			   Format: <control label> <value> these can be in any order
 //
-//			   control labels: #k-count, #input-filename, #output-filename, #use-labels, 
+//			   control labels: #k-count, #input-filename, #output-filename, #use-labels,
 //				 #tolerance, #EOF
 //
-//             values: k value = integer, input datafile name = string,  
-//				 output datafile name = string, use data labels = boolean (1, 0), 
+//             values: k value = integer, input datafile name = string,
+//				 output datafile name = string, use data labels = boolean (1, 0),
 //				 stopping tolerance value = float, eof = no value
 //
 //        <datafile.dat> - classification set - filename specified in the control file
@@ -40,7 +40,7 @@
 //***********************************************************************
 // created by: j. aleshunas
 // created on: 9 nov 04
-// modified on: 20 oct 14 
+// modified on: 20 oct 14
 //
 // © 2004 John Aleshunas
 //
@@ -60,7 +60,7 @@ using namespace std;
 class Cluster_instance {
 
 	// private class variables
-	
+
 	// private methods
 
 public:
@@ -79,12 +79,12 @@ public:
 class Cluster {
 
 	// private class variables
-	
+
 	// private methods
 
 public:
 	// public class variables
-    vector<Cluster_instance> vclThe_cluster;
+	vector<Cluster_instance> vclThe_cluster;
 
 	// public methods
 	Cluster(void); // constructor
@@ -97,7 +97,7 @@ public:
 class Cluster_set {
 
 	// private class variables
-    vector<Cluster> vclThe_cluster_set;
+	vector<Cluster> vclThe_cluster_set;
 	vector< vector<float> > vvfMeans;
 	vector< vector<float> > vvfOld_means;
 	int iK_count;
@@ -108,7 +108,7 @@ class Cluster_set {
 	int iIteration;
 	int iAttribute_ct;
 	bool bUseLabels;
-	
+
 	// private methods
 	void Read_input_data(void);
     void Write_output_data(void);

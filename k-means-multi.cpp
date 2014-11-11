@@ -1,23 +1,23 @@
 //***********************************************************************
 // k-means-multi.cpp
 //
-//   this is an implementation of the K-means classification algorithm. 
-//   it accepts vectors of multiple attributes (with classifications) and clusters them 
+//   this is an implementation of the K-means classification algorithm.
+//   it accepts vectors of multiple attributes (with classifications) and clusters them
 //	 into K clusters
 //
 // INVOKE APPLICATION USING: k-means-multi <control file name>
 //
 // INPUTS: (from disk file)
-//        <control.txt> - control file 
+//        <control.txt> - control file
 //			   the control file can have any name - specified at application command
 //
 //			   Format: <control label> <value> these can be in any order
 //
-//			   control labels: #k-count, #input-filename, #output-filename, #use-labels, 
+//			   control labels: #k-count, #input-filename, #output-filename, #use-labels,
 //				 #tolerance, #EOF
 //
-//             values: k value = integer, input datafile name = string,  
-//				 output datafile name = string, use data labels = boolean (1, 0), 
+//             values: k value = integer, input datafile name = string,
+//				 output datafile name = string, use data labels = boolean (1, 0),
 //				 stopping tolerance value = float, eof = no value
 //
 //        <datafile.dat> - classification set - filename specified in the control file
@@ -40,7 +40,7 @@
 //***********************************************************************
 // created by: j. aleshunas
 // created on: 9 nov 04
-// modified on: 20 oct 14 
+// modified on: 20 oct 14
 //
 // © 2004 John Aleshunas
 //
@@ -79,13 +79,13 @@ Cluster_set::Cluster_set(void){
 
 	// local variables
 
-	// initialize the class variables 
+	// initialize the class variables
 	iIteration = 0;
 	iK_count = 1;
 	sIn_file = "default_in.dat";
 	sOut_file = "default_out.txt";
-	bUseLabels = false; 
-	fTolerance = 0.1; 
+	bUseLabels = false;
+	fTolerance = 0.1;
 
 	return;
 } //Cluster_set::Cluster_set
@@ -96,45 +96,45 @@ void Cluster_set::Read_control_data(string sControlFilename) {
 	// local variables
 	string sTitle;
 	bool bNot_done;
-	
+
 	// initialize loop flag
 	bNot_done = true;
 
 	// declare an input stream to read the data
 	ifstream strInput_stream;
-	
+
 	// open the input stream to read the key
 	strInput_stream.open(sControlFilename.c_str());
 
 	// check if the file was OK
 	if (strInput_stream.is_open()){
 		while(bNot_done){ // read to the end of the control file
-		
-			strInput_stream >> sTitle; // read the control label 
-			
+
+			strInput_stream >> sTitle; // read the control label
+
 			if(sTitle == "#k-count"){ // read the count of neighbors
 			strInput_stream >> iK_count;
-			} // if 
-			
+			} // if
+
 			if(sTitle == "#input-filename"){ // read the input filename
 			strInput_stream >> sIn_file;
-			} // if 
-			
+			} // if
+
 			if(sTitle == "#output-filename"){ // read the output filename
 			strInput_stream >> sOut_file;
-			} // if 
-			
+			} // if
+
 			if(sTitle == "#use-labels"){ // read the use-labels flag
 			strInput_stream >> bUseLabels;
-			} // if 
-			
+			} // if
+
 			if(sTitle == "#tolerance"){ // // read the stopping criteria
 			strInput_stream >> fTolerance;
-			} // if 
-			
+			} // if
+
 			if(sTitle == "#EOF"){ // // read the end of file label
 			bNot_done = false;
-			} // if 
+			} // if
 		} // while
 	} //if
 
@@ -259,7 +259,7 @@ void Cluster_set::Write_output_data(void){
 	unsigned uInstance_index;
 	int iCluster_index, iAttribute_index;
 
-	// declare an output stream 
+	// declare an output stream
 	ofstream strResults_out_stream;
 
 	// open the stream to write the output plaintext
@@ -267,7 +267,7 @@ void Cluster_set::Write_output_data(void){
 
 	if(vclThe_cluster_set.size() < 1) { // we have an empty cluster_set
 		cout << endl << "No clusters to send to output file!" << endl << endl;
-	} else { // output the cluster results 
+	} else { // output the cluster results
 		// loop thru each cluster
 		for (iCluster_index = 0; iCluster_index < iK_count; iCluster_index++){
 
@@ -299,7 +299,7 @@ void Cluster_set::Write_output_data(void){
 			// output CR/LF
 			strResults_out_stream << endl;
 		} // for
-	} // if 
+	} // if
 
 	strResults_out_stream.close();
 
@@ -331,7 +331,7 @@ void Cluster_set::Identify_mean_values(void){
 	// allocate memory for the local vector
 	vfValues.resize(iAttribute_ct);
 
-	if (iIteration < 1) { // if this is the first iteration - initialize the cluster mean values 
+	if (iIteration < 1) { // if this is the first iteration - initialize the cluster mean values
 		for (iCluster_index = 0; iCluster_index < iK_count; iCluster_index++){ // read K-instances
 			for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){ // read attributes
 				vvfMeans[iCluster_index][iAttribute_index]
@@ -392,7 +392,7 @@ void Cluster_set::Cluster_data(void){
 				fSum_of_squares = fSum_of_squares + fSquared_difference;
 			} // for
 
-			// if this value is less than the best squared difference (BSD) 
+			// if this value is less than the best squared difference (BSD)
 			if (fSum_of_squares < fBest_squared_difference){
 				fBest_squared_difference = fSum_of_squares; // save it as BSD
 
