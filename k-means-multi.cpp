@@ -85,7 +85,7 @@ Cluster_set::Cluster_set(void){
 	sIn_file = "default_in.dat";
 	sOut_file = "default_out.txt";
 	bUseLabels = false;
-	fTolerance = 0.1;
+	fTolerance = 0.1f;
 
 	return;
 } //Cluster_set::Cluster_set

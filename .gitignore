@@ -1,0 +1,5 @@
+#Compiled sources
+*.o
+
+#Project executable
+k-means-multi

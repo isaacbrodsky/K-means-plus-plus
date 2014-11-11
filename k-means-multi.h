@@ -65,8 +65,8 @@ class Cluster_instance {
 
 public:
 	// public class variables
-    vector <float> vfAttribute;
-    string sClassification;
+	vector<float> vfAttribute;
+	string sClassification;
 
 	// public methods
 	Cluster_instance(void); // constructor
@@ -111,7 +111,7 @@ class Cluster_set {
 
 	// private methods
 	void Read_input_data(void);
-    void Write_output_data(void);
+	void Write_output_data(void);
 	void Setup_cluster_set(void);
 	void Identify_mean_values(void);
 	void Cluster_data(void);

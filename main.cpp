@@ -53,7 +53,6 @@ int main(int argc, char *argv[]) {
 	// local variables
 	Cluster_set clCluster_set_instance;
 	int iArg_val;
-	char cPause;
 
 	// check if there are any command line arguments
 	iArg_val = argc;
