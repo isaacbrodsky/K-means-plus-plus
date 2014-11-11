@@ -5,18 +5,28 @@
 //   it accepts vectors of multiple attributes (with classifications) and clusters them 
 //	 into K clusters
 //
-// INPUTS: (from disk file)
-//        control.dat - control file - space delimited (optional)
-//             k value, input datafile name, output datafile name, data labels boolean flag, 
-//				stopping tolerance value
+// INVOKE APPLICATION USING: k-means-multi <control file name>
 //
-//        datafile.dat - classification set
+// INPUTS: (from disk file)
+//        <control.txt> - control file 
+//			   the control file can have any name - specified at application command
+//
+//			   Format: <control label> <value> these can be in any order
+//
+//			   control labels: #k-count, #input-filename, #output-filename, #use-labels, 
+//				 #tolerance, #EOF
+//
+//             values: k value = integer, input datafile name = string,  
+//				 output datafile name = string, use data labels = boolean (1, 0), 
+//				 stopping tolerance value = float, eof = no value
+//
+//        <datafile.dat> - classification set - filename specified in the control file
 //             attribute count - don't include the classification in
 //                                 the count
 //             data - space delimited, classification (can be empty)
 //
 // OUTPUTS: (to disk file)
-//        datafile_cl.out - space delimited
+//        <output_filename> - space delimited - filename specified in the control file
 //             for each cluster:
 //					the cluster mean value (by attribute) and the count of clustered instances
 //					listing of each clustered instance with its classification
@@ -30,7 +40,7 @@
 //***********************************************************************
 // created by: j. aleshunas
 // created on: 9 nov 04
-// modified on: 22 jan 07
+// modified on: 20 oct 14 
 //
 // © 2004 John Aleshunas
 //

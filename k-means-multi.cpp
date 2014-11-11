@@ -5,18 +5,28 @@
 //   it accepts vectors of multiple attributes (with classifications) and clusters them 
 //	 into K clusters
 //
-// INPUTS: (from disk file)
-//        control.dat - control file - space delimited (optional)
-//             k value, input datafile name, output datafile name, data labels boolean flag, 
-//				stopping tolerance value
+// INVOKE APPLICATION USING: k-means-multi <control file name>
 //
-//        datafile.dat - classification set
+// INPUTS: (from disk file)
+//        <control.txt> - control file 
+//			   the control file can have any name - specified at application command
+//
+//			   Format: <control label> <value> these can be in any order
+//
+//			   control labels: #k-count, #input-filename, #output-filename, #use-labels, 
+//				 #tolerance, #EOF
+//
+//             values: k value = integer, input datafile name = string,  
+//				 output datafile name = string, use data labels = boolean (1, 0), 
+//				 stopping tolerance value = float, eof = no value
+//
+//        <datafile.dat> - classification set - filename specified in the control file
 //             attribute count - don't include the classification in
 //                                 the count
 //             data - space delimited, classification (can be empty)
 //
 // OUTPUTS: (to disk file)
-//        datafile_cl.out - space delimited
+//        <output_filename> - space delimited - filename specified in the control file
 //             for each cluster:
 //					the cluster mean value (by attribute) and the count of clustered instances
 //					listing of each clustered instance with its classification
@@ -30,7 +40,7 @@
 //***********************************************************************
 // created by: j. aleshunas
 // created on: 9 nov 04
-// modified on: 22 jan 07
+// modified on: 20 oct 14 
 //
 // © 2004 John Aleshunas
 //
@@ -69,8 +79,13 @@ Cluster_set::Cluster_set(void){
 
 	// local variables
 
-	// initialize the count of iterations
+	// initialize the class variables 
 	iIteration = 0;
+	iK_count = 1;
+	sIn_file = "default_in.dat";
+	sOut_file = "default_out.txt";
+	bUseLabels = false; 
+	fTolerance = 0.1; 
 
 	return;
 } //Cluster_set::Cluster_set
@@ -80,34 +95,47 @@ void Cluster_set::Read_control_data(string sControlFilename) {
 
 	// local variables
 	string sTitle;
+	bool bNot_done;
+	
+	// initialize loop flag
+	bNot_done = true;
 
 	// declare an input stream to read the data
 	ifstream strInput_stream;
-
+	
 	// open the input stream to read the key
 	strInput_stream.open(sControlFilename.c_str());
 
 	// check if the file was OK
 	if (strInput_stream.is_open()){
-
-		// read the count of neighbors
-		strInput_stream >> sTitle; // read and ignore 
-		strInput_stream >> iK_count;
-
-		// read the filenames
-		strInput_stream >> sTitle; // read and ignore 
-		strInput_stream >> sIn_file;
-		strInput_stream >> sTitle; // read and ignore 
-		strInput_stream >> sOut_file;
-
-		// read the use-labels flag
-		strInput_stream >> sTitle; // read and ignore 
-		strInput_stream >> bUseLabels;
-
-		// read the stopping criteria
-		strInput_stream >> sTitle; // read and ignore 
-		strInput_stream >> fTolerance;
-
+		while(bNot_done){ // read to the end of the control file
+		
+			strInput_stream >> sTitle; // read the control label 
+			
+			if(sTitle == "#k-count"){ // read the count of neighbors
+			strInput_stream >> iK_count;
+			} // if 
+			
+			if(sTitle == "#input-filename"){ // read the input filename
+			strInput_stream >> sIn_file;
+			} // if 
+			
+			if(sTitle == "#output-filename"){ // read the output filename
+			strInput_stream >> sOut_file;
+			} // if 
+			
+			if(sTitle == "#use-labels"){ // read the use-labels flag
+			strInput_stream >> bUseLabels;
+			} // if 
+			
+			if(sTitle == "#tolerance"){ // // read the stopping criteria
+			strInput_stream >> fTolerance;
+			} // if 
+			
+			if(sTitle == "#EOF"){ // // read the end of file label
+			bNot_done = false;
+			} // if 
+		} // while
 	} //if
 
 	else cout << "Error reading the file " << sControlFilename << endl << endl; // print error message
@@ -171,9 +199,6 @@ void Cluster_set::Read_input_data(void){
 	// declare an input stream to read the key
 	ifstream strInput_stream;
 
-	// modify the filename
-	//sIn_file = sIn_file + ".dat";
-
 	// declare data storage for the input data
 	Cluster_instance clInput_instance;
 
@@ -210,7 +235,7 @@ void Cluster_set::Read_input_data(void){
 
 	} //if
 
-	else cout << "Error reading the input data file!" << endl << endl; // print error message
+	else cout << "Error reading " << sIn_file << endl << endl; // print error message
 
 	strInput_stream.close();  // close filestream
 
@@ -234,46 +259,47 @@ void Cluster_set::Write_output_data(void){
 	unsigned uInstance_index;
 	int iCluster_index, iAttribute_index;
 
-	// modify the filename
-	//sOut_file = sOut_file + "_cl.out";
-
 	// declare an output stream 
 	ofstream strResults_out_stream;
 
 	// open the stream to write the output plaintext
 	strResults_out_stream.open(sOut_file.c_str());
 
-	// loop thru each cluster
-	for (iCluster_index = 0; iCluster_index < iK_count; iCluster_index++){
+	if(vclThe_cluster_set.size() < 1) { // we have an empty cluster_set
+		cout << endl << "No clusters to send to output file!" << endl << endl;
+	} else { // output the cluster results 
+		// loop thru each cluster
+		for (iCluster_index = 0; iCluster_index < iK_count; iCluster_index++){
 
-		// output a cluster header - cluster #, cluster mean
-		strResults_out_stream << "Cluster #" << iCluster_index + 1 << " with mean ";
-		for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
-			strResults_out_stream << vvfMeans[iCluster_index][iAttribute_index] << " ";
-		} // for
-		strResults_out_stream << " and member count "
-			<< vclThe_cluster_set[iCluster_index].vclThe_cluster.size() << endl;
-
-		// loop thru the cluster members
-		for (uInstance_index = 0;
-			uInstance_index < vclThe_cluster_set[iCluster_index].vclThe_cluster.size(); uInstance_index++){
-
-			// output the cluster member data
+			// output a cluster header - cluster #, cluster mean
+			strResults_out_stream << "Cluster #" << iCluster_index + 1 << " with mean ";
 			for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
-				strResults_out_stream
-					<< vclThe_cluster_set[iCluster_index].vclThe_cluster[uInstance_index].vfAttribute[iAttribute_index];
-				strResults_out_stream << " ";
+				strResults_out_stream << vvfMeans[iCluster_index][iAttribute_index] << " ";
 			} // for
-			strResults_out_stream << " ";
-			strResults_out_stream << vclThe_cluster_set[iCluster_index].vclThe_cluster[uInstance_index].sClassification;
+			strResults_out_stream << " and member count "
+				<< vclThe_cluster_set[iCluster_index].vclThe_cluster.size() << endl;
 
-			// output a CR/LF
+			// loop thru the cluster members
+			for (uInstance_index = 0;
+				uInstance_index < vclThe_cluster_set[iCluster_index].vclThe_cluster.size(); uInstance_index++){
+
+				// output the cluster member data
+				for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
+					strResults_out_stream
+						<< vclThe_cluster_set[iCluster_index].vclThe_cluster[uInstance_index].vfAttribute[iAttribute_index];
+					strResults_out_stream << " ";
+				} // for
+				strResults_out_stream << " ";
+				strResults_out_stream << vclThe_cluster_set[iCluster_index].vclThe_cluster[uInstance_index].sClassification;
+
+				// output a CR/LF
+				strResults_out_stream << endl;
+			} // for
+
+			// output CR/LF
 			strResults_out_stream << endl;
 		} // for
-
-		// output CR/LF
-		strResults_out_stream << endl;
-	} // for
+	} // if 
 
 	strResults_out_stream.close();
 
