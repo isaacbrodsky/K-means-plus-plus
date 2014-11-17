@@ -1,11 +1,11 @@
 //***********************************************************************
-// main.cpp for k-means-multi
+// main.cpp for k-means++
 //
 //   this is an implementation of the K-means classification algorithm.
 //   it accepts vectors of multiple attributes (with classifications) and clusters them
 //	 into K clusters
 //
-// INVOKE APPLICATION USING: k-means-multi <control file name>
+// INVOKE APPLICATION USING: k-means++ <control file name>
 //
 // INPUTS: (from disk file)
 //        <control.txt> - control file
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
 	iArg_val = argc;
 	if (iArg_val < 2) { // missing input argument
 		cout << "No control file specified" << endl << endl;
-		cout << "Required input format is: k-means-multi <control file name>" << endl << endl;
+		cout << "Required input format is: k-means++ <control file name>" << endl << endl;
 		return 1;
 	}
 	else { // input argument present

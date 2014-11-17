@@ -5,7 +5,7 @@
 //   it accepts vectors of multiple attributes (with classifications) and clusters them
 //	 into K clusters
 //
-// INVOKE APPLICATION USING: k-means-multi <control file name>
+// INVOKE APPLICATION USING: k-means++ <control file name>
 //
 // INPUTS: (from disk file)
 //        <control.txt> - control file
