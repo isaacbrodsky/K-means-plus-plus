@@ -117,39 +117,35 @@ void Cluster_set::Read_control_data(string sControlFilename) {
 		while(bNot_done){ // read to the end of the control file
 
 			strInput_stream >> sTitle; // read the control label
-
-			if(sTitle == "#k-count"){ // read the count of neighbors
+			if (strInput_stream.fail() // Check for failed read
+				|| sTitle == "#EOF") { // read the end of file label
+				bNot_done =  false;
+			} // if
+			else if (sTitle == "#k-count"){ // read the count of neighbors
 				strInput_stream >> iK_count;
 			} // if
-
-			if(sTitle == "#input-filename"){ // read the input filename
+			else if (sTitle == "#input-filename"){ // read the input filename
 				strInput_stream >> sIn_file;
 			} // if
-
-			if(sTitle == "#output-filename"){ // read the output filename
+			else if (sTitle == "#output-filename"){ // read the output filename
 				strInput_stream >> sOut_file;
 			} // if
-
-			if(sTitle == "#use-labels"){ // read the use-labels flag
+			else if (sTitle == "#use-labels"){ // read the use-labels flag
 				strInput_stream >> bUseLabels;
 			} // if
-
-			if(sTitle == "#tolerance"){ // read the stopping criteria
+			else if (sTitle == "#tolerance"){ // read the stopping criteria
 				strInput_stream >> fTolerance;
 			} // if
-
-			if (sTitle == "#plus-plus"){ // control k-means++ initialization
+			else if (sTitle == "#plus-plus"){ // control k-means++ initialization
 				strInput_stream >> bUsePlusPlus;
 			} // if
-			
-			if (sTitle == "#plus-plus-random-seed"){ // Specify k-means++ random seed
+			else if (sTitle == "#plus-plus-random-seed"){ // Specify k-means++ random seed
 				strInput_stream >> uRandomSeed;
 				mtRandom.seed(uRandomSeed);
-			}
-
-			if(sTitle == "#EOF"){ // read the end of file label
-				bNot_done = false;
 			} // if
+			else{
+				cerr << "Unrecognized directive in control file." << endl;
+			}
 		} // while read control file
 	} // if control file open
 	else { // print error message
@@ -243,10 +239,10 @@ void Cluster_set::Read_input_data(void){
 			else {
 				clInput_instance.sClassification = "BLANK";
 			} // if
-
-			if (strInput_stream.bad()) {
-				// Not actually able to read an instance from the file
-				// (e.g. tried to read past end.)
+			
+			if (strInput_stream.fail()) {
+				// Failed to read the input.
+				// (E.g. hit the end of the file.)
 				break;
 			}
 
