@@ -40,9 +40,10 @@
 //***********************************************************************
 // created by: j. aleshunas
 // created on: 9 nov 04
-// modified on: 20 oct 14
+// modified on: 16 nov 14
 //
 // © 2004 John Aleshunas
+// Copyright 2014 Isaac Brodsky
 //
 //***********************************************************************
 
@@ -86,6 +87,8 @@ Cluster_set::Cluster_set(void){
 	sOut_file = "default_out.txt";
 	bUseLabels = false;
 	fTolerance = 0.1f;
+	// Use K-means++ by default.
+	bUsePlusPlus = true;
 
 	return;
 } //Cluster_set::Cluster_set
@@ -113,32 +116,37 @@ void Cluster_set::Read_control_data(string sControlFilename) {
 			strInput_stream >> sTitle; // read the control label
 
 			if(sTitle == "#k-count"){ // read the count of neighbors
-			strInput_stream >> iK_count;
+				strInput_stream >> iK_count;
 			} // if
 
 			if(sTitle == "#input-filename"){ // read the input filename
-			strInput_stream >> sIn_file;
+				strInput_stream >> sIn_file;
 			} // if
 
 			if(sTitle == "#output-filename"){ // read the output filename
-			strInput_stream >> sOut_file;
+				strInput_stream >> sOut_file;
 			} // if
 
 			if(sTitle == "#use-labels"){ // read the use-labels flag
-			strInput_stream >> bUseLabels;
+				strInput_stream >> bUseLabels;
 			} // if
 
-			if(sTitle == "#tolerance"){ // // read the stopping criteria
-			strInput_stream >> fTolerance;
+			if(sTitle == "#tolerance"){ // read the stopping criteria
+				strInput_stream >> fTolerance;
 			} // if
 
-			if(sTitle == "#EOF"){ // // read the end of file label
-			bNot_done = false;
+			if (sTitle == "#plus-plus"){ // control k-means++ initialization
+				strInput_stream >> bUsePlusPlus;
 			} // if
-		} // while
-	} //if
 
-	else cout << "Error reading the file " << sControlFilename << endl << endl; // print error message
+			if(sTitle == "#EOF"){ // read the end of file label
+				bNot_done = false;
+			} // if
+		} // while read control file
+	} // if control file open
+	else { // print error message
+		cout << "Error reading the file " << sControlFilename << endl << endl;
+	}
 
 	strInput_stream.close();  // close filestream
 
@@ -158,20 +166,20 @@ void Cluster_set::Execute_clustering(void){
 	while (bNot_done){
 
 		// set up the cluster set
-		Setup_cluster_set(); //
+		Setup_cluster_set();
 
 		// identify the k means values
-		Identify_mean_values(); //
+		Identify_mean_values();
 
 		// cluster the input data using the k means values
-		Cluster_data(); //
+		Cluster_data();
 
 		// calculate the means of the clusters
-		Calculate_cluster_means(); //
+		Calculate_cluster_means();
 
 		// compare the old mean values to the new mean values
 		// if the difference is less than the tolerance value then stop clustering
-		bNot_done = Compare_mean_values(); //
+		bNot_done = Compare_mean_values();
 
 		// increment the iteration
 		iIteration++;
@@ -180,7 +188,7 @@ void Cluster_set::Execute_clustering(void){
 	} // while
 
 	// write the output data
-	Write_output_data(); //  <--- THIS IS THE NEXT LOCATION TO WORK ON
+	Write_output_data();
 
 	return;
 } // Cluster_set::Execute_clustering
@@ -228,14 +236,21 @@ void Cluster_set::Read_input_data(void){
 				clInput_instance.sClassification = "BLANK";
 			} // if
 
+			if (strInput_stream.bad()) {
+				// Not actually able to read an instance from the file
+				// (e.g. tried to read past end.)
+				break;
+			}
+
 			// save the data in the vector set
 			vclInput_data.vclThe_cluster.push_back(clInput_instance);
 
 		}// while
 
 	} //if
-
-	else cout << "Error reading " << sIn_file << endl << endl; // print error message
+	else { // print error message
+		cout << "Error reading " << sIn_file << endl << endl;
+	}
 
 	strInput_stream.close();  // close filestream
 
@@ -321,6 +336,11 @@ void Cluster_set::Setup_cluster_set(void) {
 } // Cluster_set::Setup_cluster_set
 
 //***********************************************************************
+void Cluster_set::Initialize_plus_plus(void) {
+
+} // Cluster_set::Initialize_plus_plus
+
+//***********************************************************************
 void Cluster_set::Identify_mean_values(void){
 
 	// local variables
@@ -332,13 +352,18 @@ void Cluster_set::Identify_mean_values(void){
 	vfValues.resize(iAttribute_ct);
 
 	if (iIteration < 1) { // if this is the first iteration - initialize the cluster mean values
-		for (iCluster_index = 0; iCluster_index < iK_count; iCluster_index++){ // read K-instances
-			for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){ // read attributes
-				vvfMeans[iCluster_index][iAttribute_index]
-					= vclInput_data.vclThe_cluster[iCluster_index].vfAttribute[iAttribute_index];
-				fCheck_value = vclInput_data.vclThe_cluster[iCluster_index].vfAttribute[iAttribute_index];
-			} // for
-		} //for
+		if (bUsePlusPlus) {
+			Initialize_plus_plus();
+		}
+		else { // Use the first k instances.
+			for (iCluster_index = 0; iCluster_index < iK_count; iCluster_index++){ // read K-instances
+				for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){ // read attributes
+					vvfMeans[iCluster_index][iAttribute_index]
+						= vclInput_data.vclThe_cluster[iCluster_index].vfAttribute[iAttribute_index];
+					fCheck_value = vclInput_data.vclThe_cluster[iCluster_index].vfAttribute[iAttribute_index];
+				} // for
+			} //for
+		}
 	} // if
 
 	// save the existing mean values

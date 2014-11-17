@@ -40,9 +40,10 @@
 //***********************************************************************
 // created by: j. aleshunas
 // created on: 9 nov 04
-// modified on: 20 oct 14
+// modified on: 16 nov 14
 //
 // © 2004 John Aleshunas
+// Copyright 2014 Isaac Brodsky
 //
 //***********************************************************************
 
@@ -56,6 +57,7 @@ using namespace std;
 
 //***********************************************************************
 // class Cluster_instance declaration
+// An instance of data in the clustering system.
 //***********************************************************************
 class Cluster_instance {
 
@@ -108,11 +110,13 @@ class Cluster_set {
 	int iIteration;
 	int iAttribute_ct;
 	bool bUseLabels;
+	bool bUsePlusPlus;
 
 	// private methods
 	void Read_input_data(void);
 	void Write_output_data(void);
 	void Setup_cluster_set(void);
+	void Initialize_plus_plus(void);
 	void Identify_mean_values(void);
 	void Cluster_data(void);
 	void Calculate_cluster_means(void);

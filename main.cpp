@@ -40,9 +40,10 @@
 //***********************************************************************
 // created by: j. aleshunas
 // created on: 9 nov 04
-// modified on: 20 oct 14
+// modified on: 16 nov 14
 //
 // © 2004 John Aleshunas
+// Copyright 2014 Isaac Brodsky
 //
 //***********************************************************************
 
@@ -59,6 +60,7 @@ int main(int argc, char *argv[]) {
 	if (iArg_val < 2) { // missing input argument
 		cout << "No control file specified" << endl << endl;
 		cout << "Required input format is: k-means-multi <control file name>" << endl << endl;
+		return 1;
 	}
 	else { // input argument present
 		// read the parameter data from the input file
