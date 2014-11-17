@@ -48,6 +48,7 @@
 //***********************************************************************
 
 #include "k-means-multi.h"
+#include <fstream>
 
 //***********************************************************************
 // class Cluster_instance method declarations
@@ -89,6 +90,7 @@ Cluster_set::Cluster_set(void){
 	fTolerance = 0.1f;
 	// Use K-means++ by default.
 	bUsePlusPlus = true;
+	mtRandom = mt19937(time(nullptr));
 
 	return;
 } //Cluster_set::Cluster_set
@@ -99,6 +101,7 @@ void Cluster_set::Read_control_data(string sControlFilename) {
 	// local variables
 	string sTitle;
 	bool bNot_done;
+	unsigned int uRandomSeed;
 
 	// initialize loop flag
 	bNot_done = true;
@@ -138,6 +141,11 @@ void Cluster_set::Read_control_data(string sControlFilename) {
 			if (sTitle == "#plus-plus"){ // control k-means++ initialization
 				strInput_stream >> bUsePlusPlus;
 			} // if
+			
+			if (sTitle == "#plus-plus-random-seed"){ // Specify k-means++ random seed
+				strInput_stream >> uRandomSeed;
+				mtRandom.seed(uRandomSeed);
+			}
 
 			if(sTitle == "#EOF"){ // read the end of file label
 				bNot_done = false;
@@ -337,7 +345,77 @@ void Cluster_set::Setup_cluster_set(void) {
 
 //***********************************************************************
 void Cluster_set::Initialize_plus_plus(void) {
+	// Initializes using K-means++.
 
+	size_t szData = vclInput_data.vclThe_cluster.size();
+	// Points that have already been selected as starting points.
+	bool *bSkipPoints = new bool[szData];
+	float *fDistance = new float[szData];
+	int iSelectedPoints = 0;
+	int iAttribute_index;
+	float fTotalDistance;
+	float fDifference;
+	float fSquared_difference;
+	float fSum_of_squares;
+	float fRandomDistance;
+
+	// Select the first data instance as the initial mean
+	for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){ // read attributes
+		vvfMeans[0][iAttribute_index]
+			= vclInput_data.vclThe_cluster[0].vfAttribute[iAttribute_index];
+	} // for
+	bSkipPoints[0] = true;
+	iSelectedPoints++;
+
+	// While we don't have enough starting clusters
+	for (; iSelectedPoints < iK_count; iSelectedPoints++) {
+		fTotalDistance = 0;
+		
+		// Compute distance to nearest cluster for all data instances.
+		for (size_t i = 0; i < szData; i++) {
+			// Skip if already selected as a starting point
+			if (!bSkipPoints[i]) {
+				// Compute distance to nearest mean
+				fDistance[i] = 0;
+				for (int iK_index = 0; iK_index < iSelectedPoints; iK_index++) {
+					fSum_of_squares = 0;
+					for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++) {
+						fDifference = (vclInput_data.vclThe_cluster[i].vfAttribute[iAttribute_index] - vvfMeans[iK_index][iAttribute_index]);
+						fSquared_difference = fDifference * fDifference;
+						fSum_of_squares = fSum_of_squares + fSquared_difference;
+					} // for
+					if (iK_index == 0 || fSum_of_squares < fDistance[i]) {
+						fDistance[i] = fSum_of_squares;
+					}
+				}
+				fTotalDistance += fDistance[i];
+			}
+		}
+
+		// Determine which instance to take as a new starting cluster
+		fRandomDistance
+			= static_cast<float>(mtRandom()) / static_cast<float>(mtRandom.max());
+		fTotalDistance *= fRandomDistance;
+		for (size_t i = 0; i < szData; i++) {
+			if (!bSkipPoints[i]) {
+				fTotalDistance -= fDistance[i];
+				if (fTotalDistance <= 0) {
+					// Select this point as a starting point
+					for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
+						vvfMeans[iSelectedPoints][iAttribute_index]
+							= vclInput_data.vclThe_cluster[i].vfAttribute[iAttribute_index];
+					} // for
+					bSkipPoints[i] = true;
+					
+					// Stop selecting the next starting point
+					break;
+				}
+			}
+		}
+	}
+
+	delete[] bSkipPoints;
+	delete[] fDistance;
 } // Cluster_set::Initialize_plus_plus
 
 //***********************************************************************
@@ -346,7 +424,6 @@ void Cluster_set::Identify_mean_values(void){
 	// local variables
 	int iCluster_index, iAttribute_index;
 	vector<float> vfValues;
-	float fCheck_value = 99999;
 
 	// allocate memory for the local vector
 	vfValues.resize(iAttribute_ct);
@@ -360,7 +437,6 @@ void Cluster_set::Identify_mean_values(void){
 				for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){ // read attributes
 					vvfMeans[iCluster_index][iAttribute_index]
 						= vclInput_data.vclThe_cluster[iCluster_index].vfAttribute[iAttribute_index];
-					fCheck_value = vclInput_data.vclThe_cluster[iCluster_index].vfAttribute[iAttribute_index];
 				} // for
 			} //for
 		}

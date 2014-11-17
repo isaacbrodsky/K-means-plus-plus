@@ -50,8 +50,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <fstream>
 #include <cmath>
+#include <random>
 
 using namespace std;
 
@@ -111,6 +111,7 @@ class Cluster_set {
 	int iAttribute_ct;
 	bool bUseLabels;
 	bool bUsePlusPlus;
+	mt19937 mtRandom;
 
 	// private methods
 	void Read_input_data(void);
