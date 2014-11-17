@@ -348,10 +348,11 @@ void Cluster_set::Initialize_plus_plus(void) {
 	// Initializes using K-means++.
 
 	size_t szData = vclInput_data.vclThe_cluster.size();
+	size_t uIndex;
 	// Points that have already been selected as starting points.
 	bool *bSkipPoints = new bool[szData];
 	float *fDistance = new float[szData];
-	int iSelectedPoints = 0;
+	int iSelectedPoints;
 	int iAttribute_index;
 	float fTotalDistance;
 	float fDifference;
@@ -365,30 +366,30 @@ void Cluster_set::Initialize_plus_plus(void) {
 			= vclInput_data.vclThe_cluster[0].vfAttribute[iAttribute_index];
 	} // for
 	bSkipPoints[0] = true;
-	iSelectedPoints++;
+	iSelectedPoints = 1;
 
 	// While we don't have enough starting clusters
 	for (; iSelectedPoints < iK_count; iSelectedPoints++) {
 		fTotalDistance = 0;
 		
 		// Compute distance to nearest cluster for all data instances.
-		for (size_t i = 0; i < szData; i++) {
+		for (uIndex = 0; uIndex < szData; uIndex++) {
 			// Skip if already selected as a starting point
-			if (!bSkipPoints[i]) {
+			if (!bSkipPoints[uIndex]) {
 				// Compute distance to nearest mean
-				fDistance[i] = 0;
+				fDistance[uIndex] = 0;
 				for (int iK_index = 0; iK_index < iSelectedPoints; iK_index++) {
 					fSum_of_squares = 0;
 					for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++) {
-						fDifference = (vclInput_data.vclThe_cluster[i].vfAttribute[iAttribute_index] - vvfMeans[iK_index][iAttribute_index]);
+						fDifference = (vclInput_data.vclThe_cluster[uIndex].vfAttribute[iAttribute_index] - vvfMeans[iK_index][iAttribute_index]);
 						fSquared_difference = fDifference * fDifference;
 						fSum_of_squares = fSum_of_squares + fSquared_difference;
 					} // for
-					if (iK_index == 0 || fSum_of_squares < fDistance[i]) {
-						fDistance[i] = fSum_of_squares;
+					if (iK_index == 0 || fSum_of_squares < fDistance[uIndex]) {
+						fDistance[uIndex] = fSum_of_squares;
 					}
 				}
-				fTotalDistance += fDistance[i];
+				fTotalDistance += fDistance[uIndex];
 			}
 		}
 
@@ -396,16 +397,16 @@ void Cluster_set::Initialize_plus_plus(void) {
 		fRandomDistance
 			= static_cast<float>(mtRandom()) / static_cast<float>(mtRandom.max());
 		fTotalDistance *= fRandomDistance;
-		for (size_t i = 0; i < szData; i++) {
-			if (!bSkipPoints[i]) {
-				fTotalDistance -= fDistance[i];
+		for (uIndex = 0; uIndex < szData; uIndex++) {
+			if (!bSkipPoints[uIndex]) {
+				fTotalDistance -= fDistance[uIndex];
 				if (fTotalDistance <= 0) {
 					// Select this point as a starting point
 					for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
 						vvfMeans[iSelectedPoints][iAttribute_index]
-							= vclInput_data.vclThe_cluster[i].vfAttribute[iAttribute_index];
+							= vclInput_data.vclThe_cluster[uIndex].vfAttribute[iAttribute_index];
 					} // for
-					bSkipPoints[i] = true;
+					bSkipPoints[uIndex] = true;
 					
 					// Stop selecting the next starting point
 					break;
