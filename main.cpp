@@ -14,7 +14,7 @@
 //			   Format: <control label> <value> these can be in any order
 //
 //			   control labels: #k-count, #input-filename, #output-filename, #use-labels,
-//				 #tolerance, #EOF
+//				 #tolerance, #plus-plus, #plus-plus-random-seed #EOF
 //
 //             values: k value = integer, input datafile name = string,
 //				 output datafile name = string, use data labels = boolean (1, 0),
@@ -48,16 +48,15 @@
 //***********************************************************************
 
 #include "k-means-multi.h"
+#include <random>
 
 int main(int argc, char *argv[]) {
-
+	
 	// local variables
 	Cluster_set clCluster_set_instance;
-	int iArg_val;
 
 	// check if there are any command line arguments
-	iArg_val = argc;
-	if (iArg_val < 2) { // missing input argument
+	if (argc < 2) { // missing input argument
 		cout << "No control file specified" << endl << endl;
 		cout << "Required input format is: k-means++ <control file name>" << endl << endl;
 		return 1;
@@ -65,8 +64,6 @@ int main(int argc, char *argv[]) {
 	else { // input argument present
 		// read the parameter data from the input file
 		clCluster_set_instance.Read_control_data(argv[1]);
-		// next line is for testing
-		//clCluster_set_instance.Read_control_data("control_iris.dat");
 
 		// start the clustering program
 		clCluster_set_instance.Execute_clustering();

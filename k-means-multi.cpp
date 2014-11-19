@@ -49,11 +49,12 @@
 
 #include "k-means-multi.h"
 #include <fstream>
+#include <chrono>
 
 //***********************************************************************
 // class Cluster_instance method declarations
 //***********************************************************************
-// class Classification_instance constructor
+// class Cluster_instance constructor
 Cluster_instance::Cluster_instance(void){
 
 	// make room for the attributes
@@ -65,7 +66,7 @@ Cluster_instance::Cluster_instance(void){
 //***********************************************************************
 // class Cluster method declarations
 //***********************************************************************
-// class Classification_instance constructor
+// class Cluster constructor
 Cluster::Cluster(void){
 
 	// no code yet
@@ -80,6 +81,7 @@ Cluster::Cluster(void){
 Cluster_set::Cluster_set(void){
 
 	// local variables
+	random_device rd;
 
 	// initialize the class variables
 	iIteration = 0;
@@ -90,7 +92,8 @@ Cluster_set::Cluster_set(void){
 	fTolerance = 0.1f;
 	// Use K-means++ by default.
 	bUsePlusPlus = true;
-	mtRandom = mt19937(time(nullptr));
+	// Seed with real random value if available
+	mtRandom = mt19937(rd());
 
 	return;
 } //Cluster_set::Cluster_set
@@ -343,25 +346,33 @@ void Cluster_set::Setup_cluster_set(void) {
 void Cluster_set::Initialize_plus_plus(void) {
 	// Initializes using K-means++.
 
+	// Number of instances in the input data
 	size_t szData = vclInput_data.vclThe_cluster.size();
 	size_t uIndex;
 	// Points that have already been selected as starting points.
-	bool *bSkipPoints = new bool[szData];
-	float *fDistance = new float[szData];
+	// true indicates already selected, false not selected
+	// as a starting point.
+	vector<bool> vbSkipPoints;
+	vector<float> vfDistance;
 	int iSelectedPoints;
 	int iAttribute_index;
+	int iK_index;
 	float fTotalDistance;
 	float fDifference;
-	float fSquared_difference;
 	float fSum_of_squares;
 	float fRandomDistance;
 
+	vbSkipPoints.resize(szData);
+	vfDistance.resize(szData);
+
 	// Select the first data instance as the initial mean
+	// (by copying it into the list of means and marking
+	// it as selected in our list of points to skip.)
 	for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){ // read attributes
 		vvfMeans[0][iAttribute_index]
 			= vclInput_data.vclThe_cluster[0].vfAttribute[iAttribute_index];
 	} // for
-	bSkipPoints[0] = true;
+	vbSkipPoints[0] = true;
 	iSelectedPoints = 1;
 
 	// While we don't have enough starting clusters
@@ -371,38 +382,50 @@ void Cluster_set::Initialize_plus_plus(void) {
 		// Compute distance to nearest cluster for all data instances.
 		for (uIndex = 0; uIndex < szData; uIndex++) {
 			// Skip if already selected as a starting point
-			if (!bSkipPoints[uIndex]) {
+			if (!vbSkipPoints[uIndex]) {
 				// Compute distance to nearest mean
-				fDistance[uIndex] = 0;
-				for (int iK_index = 0; iK_index < iSelectedPoints; iK_index++) {
+				for (iK_index = 0; iK_index < iSelectedPoints; iK_index++) {
 					fSum_of_squares = 0;
+
 					for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++) {
 						fDifference = (vclInput_data.vclThe_cluster[uIndex].vfAttribute[iAttribute_index] - vvfMeans[iK_index][iAttribute_index]);
-						fSquared_difference = fDifference * fDifference;
-						fSum_of_squares = fSum_of_squares + fSquared_difference;
+						fSum_of_squares += (fDifference * fDifference);
 					} // for
-					if (iK_index == 0 || fSum_of_squares < fDistance[uIndex]) {
-						fDistance[uIndex] = fSum_of_squares;
+
+					// If this is the first evaluated distance, use it.
+					// Otherwise only use the distance if it is better
+					// than the previous best distance.
+					if (iK_index == 0 || fSum_of_squares < vfDistance[uIndex]) {
+						vfDistance[uIndex] = fSum_of_squares;
 					}
 				}
-				fTotalDistance += fDistance[uIndex];
+
+				// Sum the distance of all points to the closest
+				// starting points as each one is calculated.
+				fTotalDistance += vfDistance[uIndex];
 			}
 		}
 
 		// Determine which instance to take as a new starting cluster
-		fRandomDistance
-			= static_cast<float>(mtRandom()) / static_cast<float>(mtRandom.max());
-		fTotalDistance *= fRandomDistance;
+		// First generate a random number uniformly between [0, fTotalDistance)
+		// using mtRandom as the PRNG.
+		fRandomDistance = uniform_real_distribution<float>(0, fTotalDistance)(mtRandom);
 		for (uIndex = 0; uIndex < szData; uIndex++) {
-			if (!bSkipPoints[uIndex]) {
-				fTotalDistance -= fDistance[uIndex];
-				if (fTotalDistance <= 0) {
+			// Don't cnsider points already selected as starting points.
+			if (!vbSkipPoints[uIndex]) {
+				// Data instances with a larger distance will have a higher effect
+				// here, biasing the k-means++ algorithm toward selecting them.
+				fRandomDistance -= vfDistance[uIndex];
+				if (fRandomDistance <= 0) {
 					// Select this point as a starting point
+					// (by copying it into the means vector
+					// and marking it as used in our own
+					// vector of points to skip.)
 					for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
 						vvfMeans[iSelectedPoints][iAttribute_index]
 							= vclInput_data.vclThe_cluster[uIndex].vfAttribute[iAttribute_index];
 					} // for
-					bSkipPoints[uIndex] = true;
+					vbSkipPoints[uIndex] = true;
 					
 					// Stop selecting the next starting point
 					break;
@@ -410,9 +433,6 @@ void Cluster_set::Initialize_plus_plus(void) {
 			}
 		}
 	}
-
-	delete[] bSkipPoints;
-	delete[] fDistance;
 } // Cluster_set::Initialize_plus_plus
 
 //***********************************************************************
