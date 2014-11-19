@@ -49,7 +49,6 @@
 
 #include "k-means-multi.h"
 #include <fstream>
-#include <chrono>
 
 //***********************************************************************
 // class Cluster_instance method declarations
