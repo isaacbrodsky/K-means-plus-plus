@@ -2,4 +2,4 @@
 *.o
 
 #Project executable
-k-means-multi
+k-means++
