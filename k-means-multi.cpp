@@ -275,7 +275,7 @@ bool Cluster_set::Read_input_data(void){
 
 	strInput_stream.close();
 
-	return;
+	return bResult;
 } //Cluster_set::Read_input_data
 
 //***********************************************************************

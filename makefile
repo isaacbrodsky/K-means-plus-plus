@@ -1,7 +1,7 @@
 # this is the makefile for k-means-multi
 
 CC = c++
-CFLAGS = -Wall
+CFLAGS = -Wall -std=c++11
 T1 = k-means++
 .SUFFIXES: .cpp .h .o
 
