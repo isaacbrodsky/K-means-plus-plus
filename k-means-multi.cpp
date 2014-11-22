@@ -146,7 +146,7 @@ void Cluster_set::Read_control_data(string sControlFilename) {
 				mtRandom.seed(uRandomSeed);
 			} // if
 			else{
-				cerr << "Unrecognized directive in control file." << endl;
+				cout << "Unrecognized directive in control file." << endl;
 			}
 		} // while read control file
 	} // if control file open
@@ -166,35 +166,36 @@ void Cluster_set::Execute_clustering(void){
 	bool bNot_done = true;
 
 	// read the input data
-	Read_input_data();
+	if (Read_input_data()) {
 
-	// loop until we are done clustering - the mean values don't change
-	while (bNot_done){
+		// loop until we are done clustering - the mean values don't change
+		while (bNot_done){
 
-		// set up the cluster set
-		Setup_cluster_set();
+			// set up the cluster set
+			Setup_cluster_set();
 
-		// identify the k means values
-		Identify_mean_values();
+			// identify the k means values
+			Identify_mean_values();
 
-		// cluster the input data using the k means values
-		Cluster_data();
+			// cluster the input data using the k means values
+			Cluster_data();
 
-		// calculate the means of the clusters
-		Calculate_cluster_means();
+			// calculate the means of the clusters
+			Calculate_cluster_means();
 
-		// compare the old mean values to the new mean values
-		// if the difference is less than the tolerance value then stop clustering
-		bNot_done = Compare_mean_values();
+			// compare the old mean values to the new mean values
+			// if the difference is less than the tolerance value then stop clustering
+			bNot_done = Compare_mean_values();
 
-		// increment the iteration
-		iIteration++;
+			// increment the iteration
+			iIteration++;
 
-		// end the main loop
-	} // while
+			// end the main loop
+		} // while
 
-	// write the output data
-	Write_output_data();
+		// write the output data
+		Write_output_data();
+	} // If input data read
 
 	return;
 } // Cluster_set::Execute_clustering
@@ -204,11 +205,13 @@ void Cluster_set::Execute_clustering(void){
 //***********************************************************************
 
 //***********************************************************************
-void Cluster_set::Read_input_data(void){
+// Returns true on success
+bool Cluster_set::Read_input_data(void){
 
 	// local variables
 	int iAttribute_index, iCluster_index;
 	float fInput_attribute;
+	bool bResult;
 
 	// declare an input stream to read the key
 	ifstream strInput_stream;
@@ -253,22 +256,24 @@ void Cluster_set::Read_input_data(void){
 
 		}// while
 
+		// allocate memory for the mean storage
+		vvfMeans.resize(iK_count);
+		vvfOld_means.resize(iK_count);
+
+		for (iCluster_index = 0; iCluster_index < iK_count; iCluster_index++){
+			// get the attribute
+			vvfMeans[iCluster_index].resize(iAttribute_ct);
+			vvfOld_means[iCluster_index].resize(iAttribute_ct);
+		} // for
+
+		bResult = true;
 	} //if
-	else { // print error message
+	else {
 		cout << "Error reading " << sIn_file << endl << endl;
+		bResult = false;
 	}
 
-	strInput_stream.close();  // close filestream
-
-	// allocate memory for the mean storage
-	vvfMeans.resize(iK_count);
-	vvfOld_means.resize(iK_count);
-
-	for (iCluster_index = 0; iCluster_index < iK_count; iCluster_index++){
-		// get the attribute
-		vvfMeans[iCluster_index].resize(iAttribute_ct);
-		vvfOld_means[iCluster_index].resize(iAttribute_ct);
-	} // for
+	strInput_stream.close();
 
 	return;
 } //Cluster_set::Read_input_data

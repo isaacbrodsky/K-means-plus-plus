@@ -113,7 +113,7 @@ class Cluster_set {
 	mt19937 mtRandom;
 
 	// private methods
-	void Read_input_data(void);
+	bool Read_input_data(void);
 	void Write_output_data(void);
 	void Setup_cluster_set(void);
 	void Initialize_plus_plus(void);
