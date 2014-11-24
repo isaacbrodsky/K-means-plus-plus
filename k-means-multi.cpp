@@ -42,7 +42,7 @@
 // created on: 9 nov 04
 // modified on: 16 nov 14
 //
-// © 2004 John Aleshunas
+// Â© 2004 John Aleshunas
 // Copyright 2014 Isaac Brodsky
 //
 //***********************************************************************
@@ -491,8 +491,8 @@ void Cluster_set::Cluster_data(void){
 	for (uIndex = 0; uIndex < vclInput_data.vclThe_cluster.size(); uIndex++) {
 
 		// initialize the tracking variables
-		fBest_squared_difference = 999999.0; // make this erroneously big
-		iBest_index = 999999; // make this erroneously big
+		fBest_squared_difference = FLT_MAX; // make this erroneously big
+		iBest_index = -1; // Forces taking the first value
 
 		// get the next data vector
 		clData_instance = vclInput_data.vclThe_cluster[uIndex];
@@ -515,7 +515,7 @@ void Cluster_set::Cluster_data(void){
 			} // for
 
 			// if this value is less than the best squared difference (BSD)
-			if (fSum_of_squares < fBest_squared_difference){
+			if (iBest_index == -1 || fSum_of_squares < fBest_squared_difference){
 				fBest_squared_difference = fSum_of_squares; // save it as BSD
 
 				// and save the this index as best index
@@ -607,4 +607,3 @@ bool Cluster_set::Compare_mean_values(void){
 } // Cluster_set::Compare_mean_values
 
 //***********************************************************************
-
