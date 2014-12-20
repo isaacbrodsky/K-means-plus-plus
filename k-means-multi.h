@@ -102,7 +102,7 @@ class Cluster_set {
 	// private methods
 	bool Read_input_data(void);
 	void Write_output_data(void);
-	float Initialize_plus_plus_process(unsigned uIndex, unsigned uLength, int iSelectedPoints, vector<float> *vfDistance, const vector<bool>& vbSkipPoints);
+	float Initialize_plus_plus_process(unsigned uIndex, unsigned uLength, int iSelectedPoints, vector<float>& vfDistance, const vector<bool>& vbSkipPoints);
 	void Initialize_plus_plus(void);
 	void Identify_mean_values(void);
 	void Cluster_data(void);

@@ -289,14 +289,14 @@ void Cluster_set::Write_output_data(void){
 	// declare an output stream
 	ofstream strResults_out_stream;
 
-	// open the stream to write the output plaintext
-	strResults_out_stream.open(sOut_file.c_str());
-
 	// Sort the cluster results
 	for (uInstance_index = 0; uInstance_index < vclInput_data.size(); uInstance_index++)
 	{
 		vclThe_cluster_set[vclInput_data[uInstance_index].iCluster].push_back(vclInput_data[uInstance_index]);
 	}
+
+	// open the stream to write the output plaintext
+	strResults_out_stream.open(sOut_file);
 
 	if(iK_count < 1) { // we have an empty cluster_set
 		cout << endl << "No clusters to send to output file!" << endl << endl;
@@ -309,7 +309,7 @@ void Cluster_set::Write_output_data(void){
 			for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
 				strResults_out_stream << vvfMeans[iCluster_index][iAttribute_index] << " ";
 			} // for
-			strResults_out_stream << " and member count "
+			strResults_out_stream << "and member count "
 				<< vclThe_cluster_set[iCluster_index].size() << "\n";
 
 			// loop thru the cluster members
@@ -340,7 +340,7 @@ void Cluster_set::Write_output_data(void){
 } // Cluster_set::Write_output_data
 
 //***********************************************************************
-float Cluster_set::Initialize_plus_plus_process(unsigned uIndex, unsigned uLength, int iSelectedPoints, vector<float> *vfDistance, const vector<bool>& vbSkipPoints) {
+float Cluster_set::Initialize_plus_plus_process(unsigned uIndex, unsigned uLength, int iSelectedPoints, vector<float>& vfDistance, const vector<bool>& vbSkipPoints) {
 
 	unsigned uLastIndex = uIndex + uLength;
 	int iAttribute_index;
@@ -365,14 +365,14 @@ float Cluster_set::Initialize_plus_plus_process(unsigned uIndex, unsigned uLengt
 				// If this is the first evaluated distance, use it.
 				// Otherwise only use the distance if it is better
 				// than the previous best distance.
-				if (iK_index == 0 || fSum_of_squares < (*vfDistance)[uIndex]) {
-					(*vfDistance)[uIndex] = fSum_of_squares;
+				if (iK_index == 0 || fSum_of_squares < vfDistance[uIndex]) {
+					vfDistance[uIndex] = fSum_of_squares;
 				}
 			}
 
 			// Sum the distance of all points to the closest
 			// starting points as each one is calculated.
-			fTotalDistance += (*vfDistance)[uIndex];
+			fTotalDistance += vfDistance[uIndex];
 		}
 	}
 
@@ -416,7 +416,7 @@ void Cluster_set::Initialize_plus_plus(void) {
 		if (iNumPlusPlusThreads == 1)
 		{
 			//Don't bother creating more threads.
-			fTotalDistance = Initialize_plus_plus_process(0, szData, 1, &vfDistance, vbSkipPoints);
+			fTotalDistance = Initialize_plus_plus_process(0, szData, iSelectedPoints, vfDistance, vbSkipPoints);
 		}
 		else
 		{
@@ -439,8 +439,8 @@ void Cluster_set::Initialize_plus_plus(void) {
 					uPerThread = szData - uDataStart;
 				}
 
-				vtThreads.push_back(async(launch::async, [=](unsigned uStart, unsigned uLength, int iSelectedPoints, vector<float> *vfDistance, const vector<bool>& vbSkipPoints) {
-					return Initialize_plus_plus_process(uStart, uLength, iSelectedPoints, vfDistance, vbSkipPoints); }, uDataStart, uPerThread, iSelectedPoints, &vfDistance, vbSkipPoints));
+				vtThreads.push_back(async(launch::async, [=, &vfDistance, &vbSkipPoints](unsigned uStart, unsigned uLength) {
+					return Initialize_plus_plus_process(uStart, uLength, iSelectedPoints, vfDistance, vbSkipPoints); }, uDataStart, uPerThread));
 
 				uDataStart += uPerThread;
 			} // Launch all threads
