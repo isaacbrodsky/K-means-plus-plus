@@ -14,11 +14,11 @@
 //			   Format: <control label> <value> these can be in any order
 //
 //			   control labels: #k-count, #input-filename, #output-filename, #use-labels,
-//				 #tolerance, #plus-plus, #plus-plus-random-seed #EOF
+//				 #tolerance, #plus-plus, #plus-plus-random-seed, #num-threads, #EOF
 //
 //             values: k value = integer, input datafile name = string,
 //				 output datafile name = string, use data labels = boolean (1, 0),
-//				 stopping tolerance value = float, eof = no value
+//				 stopping tolerance value = float, number of threads = integer, eof = no value
 //
 //        <datafile.dat> - classification set - filename specified in the control file
 //             attribute count - don't include the classification in
@@ -51,6 +51,7 @@
 #include <string>
 #include <vector>
 #include <random>
+#include <mutex>
 
 using namespace std;
 
@@ -68,6 +69,7 @@ public:
 	// public class variables
 	vector<float> vfAttribute;
 	string sClassification;
+	int iCluster;
 
 	// public methods
 	Cluster_instance(void); // constructor
@@ -75,50 +77,33 @@ public:
 }; // class Cluster_instance
 
 //***********************************************************************
-// class Cluster declaration
-//***********************************************************************
-class Cluster {
-
-	// private class variables
-
-	// private methods
-
-public:
-	// public class variables
-	vector<Cluster_instance> vclThe_cluster;
-
-	// public methods
-	Cluster(void); // constructor
-
-}; // class Cluster
-
-//***********************************************************************
 // class Cluster_set declaration
 //***********************************************************************
 class Cluster_set {
 
 	// private class variables
-	vector<Cluster> vclThe_cluster_set;
 	vector< vector<float> > vvfMeans;
 	vector< vector<float> > vvfOld_means;
 	int iK_count;
 	string sIn_file;
 	string sOut_file;
 	float fTolerance;
-	Cluster vclInput_data;
+	vector<Cluster_instance> vclInput_data;
 	int iIteration;
 	int iAttribute_ct;
 	bool bUseLabels;
 	bool bUsePlusPlus;
 	mt19937 mtRandom;
+	int iNumThreads;
+	mutex mtxCluster;
 
 	// private methods
 	bool Read_input_data(void);
 	void Write_output_data(void);
-	void Setup_cluster_set(void);
 	void Initialize_plus_plus(void);
 	void Identify_mean_values(void);
 	void Cluster_data(void);
+	void Cluster_data_process(unsigned uIndex, unsigned uLength);
 	void Calculate_cluster_means(void);
 	bool Compare_mean_values(void);
 

@@ -14,11 +14,11 @@
 //			   Format: <control label> <value> these can be in any order
 //
 //			   control labels: #k-count, #input-filename, #output-filename, #use-labels,
-//				 #tolerance, #plus-plus, #plus-plus-random-seed #EOF
+//				 #tolerance, #plus-plus, #plus-plus-random-seed, #num-threads, #EOF
 //
 //             values: k value = integer, input datafile name = string,
 //				 output datafile name = string, use data labels = boolean (1, 0),
-//				 stopping tolerance value = float, eof = no value
+//				 stopping tolerance value = float, number of threads = integer, eof = no value
 //
 //        <datafile.dat> - classification set - filename specified in the control file
 //             attribute count - don't include the classification in
@@ -50,7 +50,7 @@
 #include "k-means-multi.h"
 
 int main(int argc, char *argv[]) {
-	
+
 	// local variables
 	Cluster_set clCluster_set_instance;
 

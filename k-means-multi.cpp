@@ -14,11 +14,11 @@
 //			   Format: <control label> <value> these can be in any order
 //
 //			   control labels: #k-count, #input-filename, #output-filename, #use-labels,
-//				 #tolerance, #plus-plus, #plus-plus-random-seed #EOF
+//				 #tolerance, #plus-plus, #plus-plus-random-seed, #num-threads, #EOF
 //
 //             values: k value = integer, input datafile name = string,
 //				 output datafile name = string, use data labels = boolean (1, 0),
-//				 stopping tolerance value = float, eof = no value
+//				 stopping tolerance value = float, number of threads = integer, eof = no value
 //
 //        <datafile.dat> - classification set - filename specified in the control file
 //             attribute count - don't include the classification in
@@ -49,6 +49,7 @@
 
 #include "k-means-multi.h"
 #include <fstream>
+#include <thread>
 
 //***********************************************************************
 // class Cluster_instance method declarations
@@ -61,17 +62,6 @@ Cluster_instance::Cluster_instance(void){
 
 	return;
 } //Cluster_instance::Cluster_instance
-
-//***********************************************************************
-// class Cluster method declarations
-//***********************************************************************
-// class Cluster constructor
-Cluster::Cluster(void){
-
-	// no code yet
-
-	return;
-} //Cluster::Cluster
 
 //***********************************************************************
 // class Cluster_set public method declarations
@@ -93,6 +83,7 @@ Cluster_set::Cluster_set(void){
 	bUsePlusPlus = true;
 	// Seed with real random value if available
 	mtRandom = mt19937(rd());
+	iNumThreads = 1;
 
 	return;
 } //Cluster_set::Cluster_set
@@ -145,6 +136,9 @@ void Cluster_set::Read_control_data(string sControlFilename) {
 				strInput_stream >> uRandomSeed;
 				mtRandom.seed(uRandomSeed);
 			} // if
+			else if (sTitle == "#num-threads"){ // Number of parallel threads
+				strInput_stream >> iNumThreads;
+			} // if
 			else{
 				cout << "Unrecognized directive in control file." << endl;
 			}
@@ -170,9 +164,6 @@ void Cluster_set::Execute_clustering(void){
 
 		// loop until we are done clustering - the mean values don't change
 		while (bNot_done){
-
-			// set up the cluster set
-			Setup_cluster_set();
 
 			// identify the k means values
 			Identify_mean_values();
@@ -252,7 +243,7 @@ bool Cluster_set::Read_input_data(void){
 			}
 
 			// save the data in the vector set
-			vclInput_data.vclThe_cluster.push_back(clInput_instance);
+			vclInput_data.push_back(clInput_instance);
 
 		}// while
 
@@ -284,6 +275,7 @@ void Cluster_set::Write_output_data(void){
 	// local variables
 	unsigned uInstance_index;
 	int iCluster_index, iAttribute_index;
+	vector< vector<Cluster_instance> > vclThe_cluster_set(iK_count);
 
 	// declare an output stream
 	ofstream strResults_out_stream;
@@ -291,7 +283,13 @@ void Cluster_set::Write_output_data(void){
 	// open the stream to write the output plaintext
 	strResults_out_stream.open(sOut_file.c_str());
 
-	if(vclThe_cluster_set.size() < 1) { // we have an empty cluster_set
+	//Build the cluster results
+	for (uInstance_index = 0; uInstance_index < vclInput_data.size(); uInstance_index++)
+	{
+		vclThe_cluster_set[vclInput_data[uInstance_index].iCluster].push_back(vclInput_data[uInstance_index]);
+	}
+
+	if(iK_count < 1) { // we have an empty cluster_set
 		cout << endl << "No clusters to send to output file!" << endl << endl;
 	} else { // output the cluster results
 		// loop thru each cluster
@@ -303,20 +301,20 @@ void Cluster_set::Write_output_data(void){
 				strResults_out_stream << vvfMeans[iCluster_index][iAttribute_index] << " ";
 			} // for
 			strResults_out_stream << " and member count "
-				<< vclThe_cluster_set[iCluster_index].vclThe_cluster.size() << endl;
+				<< vclThe_cluster_set[iCluster_index].size() << endl;
 
 			// loop thru the cluster members
 			for (uInstance_index = 0;
-				uInstance_index < vclThe_cluster_set[iCluster_index].vclThe_cluster.size(); uInstance_index++){
+				uInstance_index < vclThe_cluster_set[iCluster_index].size(); uInstance_index++){
 
 				// output the cluster member data
 				for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
 					strResults_out_stream
-						<< vclThe_cluster_set[iCluster_index].vclThe_cluster[uInstance_index].vfAttribute[iAttribute_index];
+						<< vclThe_cluster_set[iCluster_index][uInstance_index].vfAttribute[iAttribute_index];
 					strResults_out_stream << " ";
 				} // for
 				strResults_out_stream << " ";
-				strResults_out_stream << vclThe_cluster_set[iCluster_index].vclThe_cluster[uInstance_index].sClassification;
+				strResults_out_stream << vclThe_cluster_set[iCluster_index][uInstance_index].sClassification;
 
 				// output a CR/LF
 				strResults_out_stream << endl;
@@ -333,25 +331,11 @@ void Cluster_set::Write_output_data(void){
 } // Cluster_set::Write_output_data
 
 //***********************************************************************
-void Cluster_set::Setup_cluster_set(void) {
-
-	// local variables
-
-	// clear the clusterset memory
-	if (iIteration > 0) vclThe_cluster_set.clear();
-
-	// allocate the clusterset memory
-	vclThe_cluster_set.resize(iK_count);
-
-	return;
-} // Cluster_set::Setup_cluster_set
-
-//***********************************************************************
 void Cluster_set::Initialize_plus_plus(void) {
 	// Initializes using K-means++.
 
 	// Number of instances in the input data
-	size_t szData = vclInput_data.vclThe_cluster.size();
+	size_t szData = vclInput_data.size();
 	size_t uIndex;
 	// Points that have already been selected as starting points.
 	// true indicates already selected, false not selected
@@ -374,7 +358,7 @@ void Cluster_set::Initialize_plus_plus(void) {
 	// it as selected in our list of points to skip.)
 	for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){ // read attributes
 		vvfMeans[0][iAttribute_index]
-			= vclInput_data.vclThe_cluster[0].vfAttribute[iAttribute_index];
+			= vclInput_data[0].vfAttribute[iAttribute_index];
 	} // for
 	vbSkipPoints[0] = true;
 	iSelectedPoints = 1;
@@ -392,7 +376,7 @@ void Cluster_set::Initialize_plus_plus(void) {
 					fSum_of_squares = 0;
 
 					for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++) {
-						fDifference = (vclInput_data.vclThe_cluster[uIndex].vfAttribute[iAttribute_index] - vvfMeans[iK_index][iAttribute_index]);
+						fDifference = (vclInput_data[uIndex].vfAttribute[iAttribute_index] - vvfMeans[iK_index][iAttribute_index]);
 						fSum_of_squares += (fDifference * fDifference);
 					} // for
 
@@ -427,7 +411,7 @@ void Cluster_set::Initialize_plus_plus(void) {
 					// vector of points to skip.)
 					for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
 						vvfMeans[iSelectedPoints][iAttribute_index]
-							= vclInput_data.vclThe_cluster[uIndex].vfAttribute[iAttribute_index];
+							= vclInput_data[uIndex].vfAttribute[iAttribute_index];
 					} // for
 					vbSkipPoints[uIndex] = true;
 					
@@ -457,7 +441,7 @@ void Cluster_set::Identify_mean_values(void){
 			for (iCluster_index = 0; iCluster_index < iK_count; iCluster_index++){ // read K-instances
 				for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){ // read attributes
 					vvfMeans[iCluster_index][iAttribute_index]
-						= vclInput_data.vclThe_cluster[iCluster_index].vfAttribute[iAttribute_index];
+						= vclInput_data[iCluster_index].vfAttribute[iAttribute_index];
 				} // for
 			} //for
 		}
@@ -476,26 +460,26 @@ void Cluster_set::Identify_mean_values(void){
 } //Cluster_set::Identify_mean_values
 
 //***********************************************************************
-void Cluster_set::Cluster_data(void){
-
+void Cluster_set::Cluster_data_process(unsigned uIndex, unsigned uLength)
+{
 	// local variables
 	float fDifference;
 	float fSquared_difference, fSum_of_squares;
 	float fBest_squared_difference;
 	int iBest_index;
-	unsigned uIndex;
 	int iK_index, iAttribute_index;
 	Cluster_instance clData_instance;
+	unsigned uLast = uIndex + uLength;
 
 	// loop for all the input data values
-	for (uIndex = 0; uIndex < vclInput_data.vclThe_cluster.size(); uIndex++) {
+	for (; uIndex < uLast; uIndex++) {
 
 		// initialize the tracking variables
 		fBest_squared_difference = FLT_MAX; // make this erroneously big
 		iBest_index = -1; // Forces taking the first value
 
 		// get the next data vector
-		clData_instance = vclInput_data.vclThe_cluster[uIndex];
+		clData_instance = vclInput_data[uIndex];
 
 		// loop thru all of the mean values
 		for (iK_index = 0; iK_index < iK_count; iK_index++) {
@@ -524,11 +508,51 @@ void Cluster_set::Cluster_data(void){
 			} // if
 		} // for
 
-		// insert the data_instance into the iBest_index cluster of the cluster_set
-		vclThe_cluster_set[iBest_index].vclThe_cluster.push_back(clData_instance);
-
+		clData_instance.iCluster = iBest_index;
 	} // for
+} //Cluster_set::Cluster_data_process
 
+//***********************************************************************
+void Cluster_set::Cluster_data(void){
+	if (iNumThreads == 1)
+	{
+		//Don't bother creating more threads.
+		Cluster_data_process(0, vclInput_data.size());
+	}
+	else
+	{
+		// local variables
+		unsigned uPerThread;
+		unsigned uData;
+		unsigned uDataStart;
+		int iThread_index;
+		vector<thread> vtThreads;
+
+		uDataStart = 0;
+		uData = vclInput_data.size();
+		uPerThread = uData / iNumThreads;
+
+		//Split the dataset into parts and launch as individual
+		//threads.
+		for (iThread_index = 0; iThread_index < iNumThreads; iThread_index++)
+		{
+			//Force the last thread to take remaining data
+			if (iThread_index == iNumThreads - 1)
+			{
+				uPerThread = uData - uDataStart;
+			}
+
+			vtThreads.push_back(thread([=](unsigned uStart, unsigned uLength) { Cluster_data_process(uStart, uLength); }, uDataStart, uPerThread));
+
+			uDataStart += uPerThread;
+		} // Launch all threads
+
+		//Wait for all threads to complete.
+		for (iThread_index = 0; iThread_index < iNumThreads; iThread_index++)
+		{
+			vtThreads[iThread_index].join();
+		} // Wait for all threads
+	}
 	return;
 } // Cluster_set::Cluster_data
 
@@ -536,37 +560,33 @@ void Cluster_set::Cluster_data(void){
 void Cluster_set::Calculate_cluster_means(void){
 
 	// local variables
-	float fSum_of_values;
 	int iK_index, iAttribute_index;
-	unsigned uInstance_index;
-	float fCluster_means;
+	unsigned uInstance_index, uInstance_sz;
+	vector<int> viCounts(iK_count);
 
-	// loop thru each cluster
-	for (iK_index = 0; iK_index < iK_count; iK_index++){
+	uInstance_sz = vclInput_data.size();
 
+	for (uInstance_index = 0; uInstance_index < uInstance_sz; uInstance_index++)
+	{
+		iK_index = vclInput_data[uInstance_index].iCluster;
 		//loop through each vector attribute
 		for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
-
-			// initialize the sum_of_values
-			fSum_of_values = 0;
-
-			// loop thru each value in the cluster
-			for (uInstance_index = 0;
-				uInstance_index < vclThe_cluster_set[iK_index].vclThe_cluster.size(); uInstance_index++){
-
-				// add to the sum
-				fSum_of_values = fSum_of_values +
-					vclThe_cluster_set[iK_index].vclThe_cluster[uInstance_index].vfAttribute[iAttribute_index];
-
-			} // for
-
-			// calulate the mean of the sum
-			fCluster_means = fSum_of_values / (float)uInstance_index;
-
-			// save the mean value
-			vvfMeans[iK_index][iAttribute_index] = fCluster_means;
+			vvfMeans[iK_index][iAttribute_index] += vclInput_data[uInstance_index].vfAttribute[iAttribute_index];
 		} // for
 
+		viCounts[iK_index]++;
+	}
+	
+	// loop thru each cluster
+	for (iK_index = 0; iK_index < iK_count; iK_index++){
+		//loop through each vector attribute
+		for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++) {
+			//If no elements, default to origin as per old code.
+			if (viCounts[iK_index] == 0)
+				vvfMeans[iK_index][iAttribute_index] = 0;
+			else
+				vvfMeans[iK_index][iAttribute_index] /= (float)viCounts[iK_index];
+		}
 	} // for
 
 	return;
