@@ -14,11 +14,14 @@
 //			   Format: <control label> <value> these can be in any order
 //
 //			   control labels: #k-count, #input-filename, #output-filename, #use-labels,
-//				 #tolerance, #plus-plus, #plus-plus-random-seed, #num-threads, #EOF
+//				 #tolerance, #plus-plus, #plus-plus-threads, #plus-plus-random-seed,
+//				 #num-threads, #EOF
 //
 //             values: k value = integer, input datafile name = string,
 //				 output datafile name = string, use data labels = boolean (1, 0),
-//				 stopping tolerance value = float, number of threads = integer, eof = no value
+//				 stopping tolerance value = float, use k-means++ = boolean (1, 0),
+//				 number of k-means++ threads = integer, random seed for k-means++ = integer,
+//				 number of threads = integer, eof = no value
 //
 //        <datafile.dat> - classification set - filename specified in the control file
 //             attribute count - don't include the classification in
@@ -40,7 +43,7 @@
 //***********************************************************************
 // created by: j. aleshunas
 // created on: 9 nov 04
-// modified on: 16 nov 14
+// modified on: 20 dec 14
 //
 // © 2004 John Aleshunas
 // Copyright 2014 Isaac Brodsky
@@ -93,11 +96,13 @@ class Cluster_set {
 	bool bUseLabels;
 	bool bUsePlusPlus;
 	mt19937 mtRandom;
+	int iNumPlusPlusThreads;
 	int iNumThreads;
 
 	// private methods
 	bool Read_input_data(void);
 	void Write_output_data(void);
+	float Initialize_plus_plus_process(unsigned uIndex, unsigned uLength, int iSelectedPoints, vector<float> *vfDistance, const vector<bool>& vbSkipPoints);
 	void Initialize_plus_plus(void);
 	void Identify_mean_values(void);
 	void Cluster_data(void);

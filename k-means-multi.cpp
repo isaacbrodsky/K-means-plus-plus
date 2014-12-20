@@ -14,11 +14,14 @@
 //			   Format: <control label> <value> these can be in any order
 //
 //			   control labels: #k-count, #input-filename, #output-filename, #use-labels,
-//				 #tolerance, #plus-plus, #plus-plus-random-seed, #num-threads, #EOF
+//				 #tolerance, #plus-plus, #plus-plus-threads, #plus-plus-random-seed,
+//				 #num-threads, #EOF
 //
 //             values: k value = integer, input datafile name = string,
 //				 output datafile name = string, use data labels = boolean (1, 0),
-//				 stopping tolerance value = float, number of threads = integer, eof = no value
+//				 stopping tolerance value = float, use k-means++ = boolean (1, 0),
+//				 number of k-means++ threads = integer, random seed for k-means++ = integer,
+//				 number of threads = integer, eof = no value
 //
 //        <datafile.dat> - classification set - filename specified in the control file
 //             attribute count - don't include the classification in
@@ -40,7 +43,7 @@
 //***********************************************************************
 // created by: j. aleshunas
 // created on: 9 nov 04
-// modified on: 16 nov 14
+// modified on: 20 dec 14
 //
 // © 2004 John Aleshunas
 // Copyright 2014 Isaac Brodsky
@@ -51,6 +54,7 @@
 #include <fstream>
 #include <thread>
 #include <cfloat>
+#include <future>
 
 //***********************************************************************
 // class Cluster_instance method declarations
@@ -85,6 +89,7 @@ Cluster_set::Cluster_set(void){
 	// Seed with real random value if available
 	mtRandom = mt19937(rd());
 	iNumThreads = 1;
+	iNumPlusPlusThreads = 1;
 
 	return;
 } //Cluster_set::Cluster_set
@@ -136,6 +141,9 @@ void Cluster_set::Read_control_data(string sControlFilename) {
 			else if (sTitle == "#plus-plus-random-seed"){ // Specify k-means++ random seed
 				strInput_stream >> uRandomSeed;
 				mtRandom.seed(uRandomSeed);
+			} // if
+			else if (sTitle == "#plus-plus-threads"){ // Specify k-means++ number of threads
+				strInput_stream >> iNumPlusPlusThreads;
 			} // if
 			else if (sTitle == "#num-threads"){ // Number of parallel threads
 				strInput_stream >> iNumThreads;
@@ -284,7 +292,7 @@ void Cluster_set::Write_output_data(void){
 	// open the stream to write the output plaintext
 	strResults_out_stream.open(sOut_file.c_str());
 
-	//Build the cluster results
+	// Sort the cluster results
 	for (uInstance_index = 0; uInstance_index < vclInput_data.size(); uInstance_index++)
 	{
 		vclThe_cluster_set[vclInput_data[uInstance_index].iCluster].push_back(vclInput_data[uInstance_index]);
@@ -302,7 +310,7 @@ void Cluster_set::Write_output_data(void){
 				strResults_out_stream << vvfMeans[iCluster_index][iAttribute_index] << " ";
 			} // for
 			strResults_out_stream << " and member count "
-				<< vclThe_cluster_set[iCluster_index].size() << endl;
+				<< vclThe_cluster_set[iCluster_index].size() << "\n";
 
 			// loop thru the cluster members
 			for (uInstance_index = 0;
@@ -318,11 +326,11 @@ void Cluster_set::Write_output_data(void){
 				strResults_out_stream << vclThe_cluster_set[iCluster_index][uInstance_index].sClassification;
 
 				// output a CR/LF
-				strResults_out_stream << endl;
+				strResults_out_stream << "\n";
 			} // for
 
 			// output CR/LF
-			strResults_out_stream << endl;
+			strResults_out_stream << "\n";
 		} // for
 	} // if
 
@@ -330,6 +338,46 @@ void Cluster_set::Write_output_data(void){
 
 	return;
 } // Cluster_set::Write_output_data
+
+//***********************************************************************
+float Cluster_set::Initialize_plus_plus_process(unsigned uIndex, unsigned uLength, int iSelectedPoints, vector<float> *vfDistance, const vector<bool>& vbSkipPoints) {
+
+	unsigned uLastIndex = uIndex + uLength;
+	int iAttribute_index;
+	int iK_index;
+	float fSum_of_squares;
+	float fDifference;
+	float fTotalDistance = 0;
+
+	// Compute distance to nearest cluster for all data instances.
+	for (; uIndex < uLastIndex; uIndex++) {
+		// Skip if already selected as a starting point
+		if (!vbSkipPoints[uIndex]) {
+			// Compute distance to nearest mean
+			for (iK_index = 0; iK_index < iSelectedPoints; iK_index++) {
+				fSum_of_squares = 0;
+
+				for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++) {
+					fDifference = (vclInput_data[uIndex].vfAttribute[iAttribute_index] - vvfMeans[iK_index][iAttribute_index]);
+					fSum_of_squares += (fDifference * fDifference);
+				} // for
+
+				// If this is the first evaluated distance, use it.
+				// Otherwise only use the distance if it is better
+				// than the previous best distance.
+				if (iK_index == 0 || fSum_of_squares < (*vfDistance)[uIndex]) {
+					(*vfDistance)[uIndex] = fSum_of_squares;
+				}
+			}
+
+			// Sum the distance of all points to the closest
+			// starting points as each one is calculated.
+			fTotalDistance += (*vfDistance)[uIndex];
+		}
+	}
+
+	return fTotalDistance;
+} // Cluster_set::Intiailize_plus_plus_process
 
 //***********************************************************************
 void Cluster_set::Initialize_plus_plus(void) {
@@ -345,10 +393,7 @@ void Cluster_set::Initialize_plus_plus(void) {
 	vector<float> vfDistance;
 	int iSelectedPoints;
 	int iAttribute_index;
-	int iK_index;
 	float fTotalDistance;
-	float fDifference;
-	float fSum_of_squares;
 	float fRandomDistance;
 
 	vbSkipPoints.resize(szData);
@@ -367,32 +412,44 @@ void Cluster_set::Initialize_plus_plus(void) {
 	// While we don't have enough starting clusters
 	for (; iSelectedPoints < iK_count; iSelectedPoints++) {
 		fTotalDistance = 0;
-		
-		// Compute distance to nearest cluster for all data instances.
-		for (uIndex = 0; uIndex < szData; uIndex++) {
-			// Skip if already selected as a starting point
-			if (!vbSkipPoints[uIndex]) {
-				// Compute distance to nearest mean
-				for (iK_index = 0; iK_index < iSelectedPoints; iK_index++) {
-					fSum_of_squares = 0;
 
-					for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++) {
-						fDifference = (vclInput_data[uIndex].vfAttribute[iAttribute_index] - vvfMeans[iK_index][iAttribute_index]);
-						fSum_of_squares += (fDifference * fDifference);
-					} // for
+		if (iNumPlusPlusThreads == 1)
+		{
+			//Don't bother creating more threads.
+			fTotalDistance = Initialize_plus_plus_process(0, szData, 1, &vfDistance, vbSkipPoints);
+		}
+		else
+		{
+			// local variables
+			unsigned uPerThread;
+			unsigned uDataStart;
+			int iThread_index;
+			vector<future<float>> vtThreads;
 
-					// If this is the first evaluated distance, use it.
-					// Otherwise only use the distance if it is better
-					// than the previous best distance.
-					if (iK_index == 0 || fSum_of_squares < vfDistance[uIndex]) {
-						vfDistance[uIndex] = fSum_of_squares;
-					}
+			uDataStart = 0;
+			uPerThread = szData / iNumThreads;
+
+			//Split the dataset into parts and launch as individual
+			//threads.
+			for (iThread_index = 0; iThread_index < iNumPlusPlusThreads; iThread_index++)
+			{
+				//Force the last thread to take remaining data
+				if (iThread_index == iNumPlusPlusThreads - 1)
+				{
+					uPerThread = szData - uDataStart;
 				}
 
-				// Sum the distance of all points to the closest
-				// starting points as each one is calculated.
-				fTotalDistance += vfDistance[uIndex];
-			}
+				vtThreads.push_back(async(launch::async, [=](unsigned uStart, unsigned uLength, int iSelectedPoints, vector<float> *vfDistance, const vector<bool>& vbSkipPoints) {
+					return Initialize_plus_plus_process(uStart, uLength, iSelectedPoints, vfDistance, vbSkipPoints); }, uDataStart, uPerThread, iSelectedPoints, &vfDistance, vbSkipPoints));
+
+				uDataStart += uPerThread;
+			} // Launch all threads
+
+			//Wait for all threads to complete.
+			for (iThread_index = 0; iThread_index < iNumPlusPlusThreads; iThread_index++)
+			{
+				fTotalDistance += vtThreads[iThread_index].get();
+			} // Wait for all threads
 		}
 
 		// Determine which instance to take as a new starting cluster
@@ -400,7 +457,7 @@ void Cluster_set::Initialize_plus_plus(void) {
 		// using mtRandom as the PRNG.
 		fRandomDistance = uniform_real_distribution<float>(0, fTotalDistance)(mtRandom);
 		for (uIndex = 0; uIndex < szData; uIndex++) {
-			// Don't cnsider points already selected as starting points.
+			// Don't consider points already selected as starting points.
 			if (!vbSkipPoints[uIndex]) {
 				// Data instances with a larger distance will have a higher effect
 				// here, biasing the k-means++ algorithm toward selecting them.

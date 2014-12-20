@@ -14,11 +14,14 @@
 //			   Format: <control label> <value> these can be in any order
 //
 //			   control labels: #k-count, #input-filename, #output-filename, #use-labels,
-//				 #tolerance, #plus-plus, #plus-plus-random-seed, #num-threads, #EOF
+//				 #tolerance, #plus-plus, #plus-plus-threads, #plus-plus-random-seed,
+//				 #num-threads, #EOF
 //
 //             values: k value = integer, input datafile name = string,
 //				 output datafile name = string, use data labels = boolean (1, 0),
-//				 stopping tolerance value = float, number of threads = integer, eof = no value
+//				 stopping tolerance value = float, use k-means++ = boolean (1, 0),
+//				 number of k-means++ threads = integer, random seed for k-means++ = integer,
+//				 number of threads = integer, eof = no value
 //
 //        <datafile.dat> - classification set - filename specified in the control file
 //             attribute count - don't include the classification in
@@ -40,7 +43,7 @@
 //***********************************************************************
 // created by: j. aleshunas
 // created on: 9 nov 04
-// modified on: 16 nov 14
+// modified on: 20 dec 14
 //
 // © 2004 John Aleshunas
 // Copyright 2014 Isaac Brodsky
