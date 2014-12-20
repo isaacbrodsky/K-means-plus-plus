@@ -51,7 +51,6 @@
 #include <string>
 #include <vector>
 #include <random>
-#include <mutex>
 
 using namespace std;
 
@@ -95,7 +94,6 @@ class Cluster_set {
 	bool bUsePlusPlus;
 	mt19937 mtRandom;
 	int iNumThreads;
-	mutex mtxCluster;
 
 	// private methods
 	bool Read_input_data(void);
