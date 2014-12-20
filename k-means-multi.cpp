@@ -50,6 +50,7 @@
 #include "k-means-multi.h"
 #include <fstream>
 #include <thread>
+#include <cfloat>
 
 //***********************************************************************
 // class Cluster_instance method declarations
@@ -468,7 +469,7 @@ void Cluster_set::Cluster_data_process(unsigned uIndex, unsigned uLength)
 	float fBest_squared_difference;
 	int iBest_index;
 	int iK_index, iAttribute_index;
-	Cluster_instance clData_instance;
+	Cluster_instance *clData_instance;
 	unsigned uLast = uIndex + uLength;
 
 	// loop for all the input data values
@@ -479,7 +480,7 @@ void Cluster_set::Cluster_data_process(unsigned uIndex, unsigned uLength)
 		iBest_index = -1; // Forces taking the first value
 
 		// get the next data vector
-		clData_instance = vclInput_data[uIndex];
+		clData_instance = &vclInput_data[uIndex];
 
 		// loop thru all of the mean values
 		for (iK_index = 0; iK_index < iK_count; iK_index++) {
@@ -491,7 +492,7 @@ void Cluster_set::Cluster_data_process(unsigned uIndex, unsigned uLength)
 			// compare the data vector to the mean vector
 			for (iAttribute_index = 0; iAttribute_index < iAttribute_ct; iAttribute_index++){
 				// calculate the difference between the data value and the mean value
-				fDifference = (clData_instance.vfAttribute[iAttribute_index] - vvfMeans[iK_index][iAttribute_index]);
+				fDifference = (clData_instance->vfAttribute[iAttribute_index] - vvfMeans[iK_index][iAttribute_index]);
 				// square the difference
 				fSquared_difference = fDifference * fDifference;
 				// add to the sum of squares
@@ -508,8 +509,9 @@ void Cluster_set::Cluster_data_process(unsigned uIndex, unsigned uLength)
 			} // if
 		} // for
 
-		clData_instance.iCluster = iBest_index;
+		clData_instance->iCluster = iBest_index;
 	} // for
+
 } //Cluster_set::Cluster_data_process
 
 //***********************************************************************
@@ -565,7 +567,7 @@ void Cluster_set::Calculate_cluster_means(void){
 	vector<int> viCounts(iK_count);
 
 	uInstance_sz = vclInput_data.size();
-
+	
 	for (uInstance_index = 0; uInstance_index < uInstance_sz; uInstance_index++)
 	{
 		iK_index = vclInput_data[uInstance_index].iCluster;
